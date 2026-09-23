@@ -22,17 +22,31 @@ def file_fingerprint(path: Path) -> str:
     return digest.hexdigest()
 
 
-def ingest(drop_dir: Path, raw_dir: Path) -> Path:
+def ingest(
+    drop_dir: Path,
+    raw_dir: Path,
+    pattern: str = "*.jsonl",
+    sft_only: bool = False,
+) -> Path:
     raw_dir.mkdir(parents=True, exist_ok=True)
     seen: set[str] = set()
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     out = raw_dir / f"notes_{stamp}.jsonl"
-    n_kept = n_dup = 0
+    n_kept = n_dup = n_skipped = 0
     with out.open("w", encoding="utf-8") as writer:
-        for src in sorted(drop_dir.glob("*.jsonl")):
+        for src in sorted(drop_dir.glob(pattern)):
             for line in src.read_text(encoding="utf-8").splitlines():
                 if not line.strip():
                     continue
+                if sft_only:
+                    row = json.loads(line)
+                    if "messages" not in row:
+                        n_skipped += 1
+                        continue
+                    if not row.get("synthetic", False):
+                        raise SystemExit(
+                            "Refusing a row without synthetic=true. Do not ingest PHI here."
+                        )
                 key = hashlib.sha256(line.encode("utf-8")).hexdigest()
                 if key in seen:
                     n_dup += 1
@@ -43,8 +57,10 @@ def ingest(drop_dir: Path, raw_dir: Path) -> Path:
     manifest = {
         "created_utc": stamp,
         "source_dir": str(drop_dir),
+        "pattern": pattern,
         "rows_kept": n_kept,
         "rows_deduped": n_dup,
+        "rows_skipped": n_skipped,
         "sha256": file_fingerprint(out),
     }
     (out.with_suffix(".manifest.json")).write_text(json.dumps(manifest, indent=2), encoding="utf-8")
@@ -55,10 +71,12 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--drop-dir", type=Path, default=Path("data"))
     p.add_argument("--raw-dir", type=Path, default=Path("mlops/var/raw"))
+    p.add_argument("--pattern", default="*.jsonl")
+    p.add_argument("--sft-only", action="store_true", help="Keep synthetic chat rows only")
     args = p.parse_args()
     # Copy the bundled synthetic file into a pretend drop folder if needed.
     args.drop_dir.mkdir(parents=True, exist_ok=True)
-    out = ingest(args.drop_dir, args.raw_dir)
+    out = ingest(args.drop_dir, args.raw_dir, pattern=args.pattern, sft_only=args.sft_only)
     print(f"wrote {out}")
 
 

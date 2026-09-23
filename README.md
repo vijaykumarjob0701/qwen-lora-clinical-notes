@@ -36,6 +36,7 @@ The long version lives in this README (it *is* the blog post). A shorter narrati
 10. [Troubleshooting](#troubleshooting)
 11. [Use case 2 — a code model for your own agent harness](#use-case-2-fine-tuning-a-code-model-for-your-own-agent-harness)
 12. [MLOps pipeline: automating the full lifecycle](#mlops-pipeline-automating-the-full-lifecycle)
+    - [End-to-end pipeline](#end-to-end-pipeline)
 13. [Companion: LLM hyperparameters](#companion-llm-hyperparameters)
 14. [License and research-only reminder](#license-and-research-only-reminder)
 
@@ -936,6 +937,56 @@ Teaching implementations live under [`mlops/`](mlops/). They operate on the fake
 
 > **Privacy again.** An “EHR connector” in a blog post is not permission to pull the real EHR. Production ingest needs a BAA where applicable, least-privilege credentials that are **not** in git, de-identification *before* any training VM, and an audit log. The snippets below use a local folder named `data/` that already contains synthetic rows.
 
+## End-to-end pipeline
+
+The pieces below can still be run one script at a time. To walk the **whole** loop with a single command — ingest → preprocess → train → write eval JSONL → gate → deploy only if the candidate wins — use the orchestrator:
+
+```bash
+# CPU / CI: stub train + stub generate, real gate + local teaching registry
+python -m mlops.pipeline --smoke
+
+# same entrypoint
+python scripts/run_pipeline.py --smoke
+PIPELINE_SMOKE=1 python -m mlops.pipeline
+
+# alias of --smoke: skip the 7B job, still exercise the flow
+python -m mlops.pipeline --dry-run
+
+# real GPU LoRA (same train_lora.py CLI the tutorial already uses)
+python -m mlops.pipeline --model-id Qwen/Qwen2.5-7B-Instruct --load-in-4bit
+```
+
+> **Synthetic only.** Every training row must set `"synthetic": true`. The pipeline refuses unmarked notes the same way [`mlops/preprocess.py`](mlops/preprocess.py) does. Do not drop real patient data, EHR exports, or anything that could be PHI into the drop folder.
+
+**Promote rule.** The candidate must beat the frozen baseline on **every** key metric (`rouge_l`, `bleu`, `entity_f1`). Strict `>` — a tie keeps production. On promote, the winning adapter is copied into `mlops/var/registry/current` and `registry.json` records metrics, a UTC timestamp, a git sha, and paths. On fail the registry is left untouched and the process exits `2`.
+
+**Baseline.** If a previous winner exists, its saved `{id, prediction, reference}` file is the baseline. Otherwise smoke mode uses a weak no-adapter stub; a GPU run generates from the bare base model.
+
+**Retrain.** Drop another `*clinical*.jsonl` into `data/` (or `--drop-dir`) and run the same command. If the drop folder has not changed since `mlops/var/pipeline_state.json`, the job exits `0` without training. `--force` overrides that. `--watch --interval 30` polls for new files.
+
+```bash
+python -m mlops.pipeline --smoke --watch --interval 30
+```
+
+Directory layout under `mlops/var/` (gitignored):
+
+```
+mlops/var/
+  raw/notes_<timestamp>.jsonl      # deduped ingest + .manifest.json
+  processed/clinical_sft.jsonl     # Qwen-templated chats
+  runs/<timestamp>/adapter/        # this run's LoRA (or smoke stub)
+  runs/<timestamp>/eval/candidate.jsonl
+  runs/<timestamp>/eval/baseline.jsonl
+  eval_report.json                 # gate metrics + promote flag
+  registry/current/                # last promoted adapter
+  registry/previous/               # previous winner (local rollback)
+  registry/versions/v00N-<stamp>/
+  registry/registry.json           # metrics, utc, git sha, paths
+  pipeline_state.json              # drop-folder fingerprint
+```
+
+`--smoke` / `--dry-run` never download a 7B checkpoint. They write a stub adapter, generate predictions by echoing (candidate) or truncating (baseline) the gold assistant text, then run the **real** eval gate and registry.
+
 ---
 
 ## (1) Data ingestion
@@ -1137,7 +1188,7 @@ A judge that is allowed to override entity-F1 is how invented drugs sneak into p
 
 ## (5) Conditional deployment
 
-**What.** If `promote` is true: merge the LoRA adapter (bf16), push a **model registry** tag, point the serving endpoint (vLLM or TGI) at it. If false: leave traffic on the old tag and page a human.
+**What.** If `promote` is true: merge the LoRA adapter (bf16), push a **model registry** tag, point the serving endpoint (vLLM or TGI) at it. If false: leave traffic on the old tag and page a human. In this repo the registry is a **local folder** (`mlops/var/registry/`), not a cloud API — `deploy_if_promoted` copies the winning adapter and writes `registry.json`.
 
 ```mermaid
 flowchart LR
@@ -1155,7 +1206,7 @@ from mlops.deploy_and_monitor import deploy_if_promoted
 deploy_if_promoted(
     report_path=Path("mlops/var/eval_report.json"),
     adapter_dir=Path("outputs/qwen-clinical-lora"),
-    registry_uri="file://mlops/var/registry/clinical-qwen",
+    registry_uri="file://mlops/var/registry",
 )
 ```
 
