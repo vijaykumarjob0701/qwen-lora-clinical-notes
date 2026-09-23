@@ -95,13 +95,14 @@ def test_hyperparameter_guide_gifs_and_links():
     text = guide.read_text(encoding="utf-8")
     linked = set()
     for line in text.splitlines():
-        if "](gifs/" in line:
-            start = line.index("](gifs/") + 2
-            end = line.index(")", start)
-            rel = line[start:end]
-            target = (guide.parent / rel).resolve()
-            assert target.is_file(), f"broken image link: {rel}"
-            linked.add(target.name)
+        if not line.lstrip().startswith("!["):
+            continue
+        start = line.index("](") + 2
+        end = line.index(")", start)
+        rel = line[start:end]
+        target = (guide.parent / rel).resolve()
+        assert target.is_file(), f"broken image link: {rel}"
+        linked.add(target.name)
     assert expected <= linked, f"README missing GIF embeds: {expected - linked}"
 
     root_readme = (ROOT / "README.md").read_text(encoding="utf-8")
