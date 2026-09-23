@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -110,3 +111,33 @@ def test_hyperparameter_guide_gifs_and_links():
     assert (ROOT / "scripts" / "generate_hyperparameter_gifs.py").is_file()
     assert (ROOT / "BLOG.md").is_file()
     assert "clinical notes" in (ROOT / "BLOG.md").read_text(encoding="utf-8").lower()
+
+
+def test_end_to_end_pipeline_smoke(tmp_path):
+    """One-command orchestrator: ingest → gate → local registry, no GPU."""
+    drop = tmp_path / "drop"
+    drop.mkdir()
+    shutil.copy(ROOT / "data" / "example_clinical_sft.jsonl", drop / "notes_clinical.jsonl")
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "mlops.pipeline",
+            "--smoke",
+            "--force",
+            "--drop-dir",
+            str(drop),
+            "--var-dir",
+            str(tmp_path / "var"),
+            "--drop-pattern",
+            "*.jsonl",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    registry = tmp_path / "var" / "registry"
+    assert (registry / "current" / "adapter_config.json").is_file()
+    meta = json.loads((registry / "registry.json").read_text(encoding="utf-8"))
+    assert meta["metrics"]["promote"] is True

@@ -49,13 +49,14 @@ def preprocess(src: Path, dest: Path) -> None:
                 messages.append({"role": msg["role"], "content": normalize_abbreviations(msg["content"])})
             record = {
                 "id": row.get("id"),
+                "synthetic": True,
                 "split": row.get("split", "train"),
                 "text": apply_qwen_template(messages, add_generation_prompt=False),
                 "messages": messages,
             }
             out.write(json.dumps(record, ensure_ascii=False) + "\n")
             n += 1
-    print(f"wrote {n} templated rows -> {dest}")
+    print(f"wrote {n} templated rows -> {dest}", flush=True)
 
 
 def main() -> None:
