@@ -16,9 +16,11 @@ bitsandbytes>=0.43.0,<0.45
 # Logging / eval helpers
 tqdm>=4.66.0
 
-# GIF diagram generation (docs/gifs)
+# GIF diagram generation (docs/gifs and docs/hyperparameters/gifs)
 pillow>=10.4.0
 imageio>=2.35.0
+matplotlib>=3.8
+numpy>=1.26
 
 # Tutorial smoke tests (CPU)
 pytest>=8.0.0
