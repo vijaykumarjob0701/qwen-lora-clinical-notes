@@ -2,7 +2,7 @@
 
 A beginner-friendly tutorial for taking an instruction-tuned Qwen model, attaching a small LoRA adapter, and teaching it to write from **synthetic** clinical notes. The same recipe later extends to a **coding-agent** model and to an **MLOps** loop that can train, gate, and deploy without a human babysitting every job.
 
-The long version lives in this README (it *is* the blog post). A shorter narrative is in [BLOG.md](BLOG.md). Runnable code is in [`train_lora.py`](train_lora.py).
+The long version lives in this README (it *is* the blog post). A shorter narrative is in [BLOG.md](BLOG.md). Runnable code is in [`train_lora.py`](train_lora.py). After you have a model and a dataset, the recipe settings — learning rate, LoRA rank, temperature, and the rest — are documented in the companion [LLM hyperparameters guide](docs/hyperparameters/README.md).
 
 > **Privacy / HIPAA warning.** The notes in this repository are 100% fake. They use invented names, invented MRNs (`DEMO-0001`), and invented stories. **Never** fine-tune on real patient notes, screenshots, EHR exports, or anything that could be PHI unless you have a documented legal basis, a BAA where required, de-identification, access control, and a security review. Do not commit real notes to git. Do not paste them into a public notebook. If you are not sure whether a field is PHI, treat it as PHI.
 
@@ -36,7 +36,8 @@ The long version lives in this README (it *is* the blog post). A shorter narrati
 10. [Troubleshooting](#troubleshooting)
 11. [Use case 2 — a code model for your own agent harness](#use-case-2-fine-tuning-a-code-model-for-your-own-agent-harness)
 12. [MLOps pipeline: automating the full lifecycle](#mlops-pipeline-automating-the-full-lifecycle)
-13. [License and research-only reminder](#license-and-research-only-reminder)
+13. [Companion: LLM hyperparameters](#companion-llm-hyperparameters)
+14. [License and research-only reminder](#license-and-research-only-reminder)
 
 ---
 
@@ -1231,6 +1232,14 @@ Do not write raw clinical text into an unsecured metrics system. Log hashes, len
 - Same tokenizer, same chat template, at every stage including vLLM.
 - Synthetic patterns only in this repo; real PHI never lands in git.
 - Small teams: Prefect + DVC + MLflow + vLLM. Larger orgs: Airflow + K8s + registry + clinician review.
+
+---
+
+## Companion: LLM hyperparameters
+
+The clinical, coder, and MLOps pages above assume a working `LoraConfig` and `TrainingArguments` block. They do not walk through every knob.
+
+**Learning rate, batch size, epochs, warmup, weight decay, optimizer, LoRA rank / alpha / dropout, target modules, max sequence length, temperature, top-p, top-k, max new tokens, and stop sequences** each get a section, a typical range, a common mistake, and a looping GIF in [`docs/hyperparameters/README.md`](docs/hyperparameters/README.md). A one-sitting narrative is in [`docs/hyperparameters/BLOG.md`](docs/hyperparameters/BLOG.md). Rebuild those pictures with `python scripts/generate_hyperparameter_gifs.py` (matplotlib + pillow; no model download). The pages stay synthetic and demo-safe — they illustrate recipe settings, not a GPU training run.
 
 ---
 
