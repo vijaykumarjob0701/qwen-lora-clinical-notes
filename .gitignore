@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Hugging Face / model caches and adapters
+.cache/
+huggingface/
+~/.cache/huggingface/
+outputs/
+adapter_output/
+merged_model/
+wandb/
+runs/
+*.bin
+*.safetensors
+*.gguf
+*.pt
+*.pth
+
+# Training artifacts
+checkpoint-*/
+eval_results.json
+mlops/var/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Secrets (never commit)
+.env
+.env.*
+*.pem
+*.key
+credentials.json
