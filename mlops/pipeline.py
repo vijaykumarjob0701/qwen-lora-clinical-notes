@@ -9,6 +9,9 @@ Synthetic / PHI-free only. One command:
 --smoke / --dry-run / PIPELINE_SMOKE=1 skip the 7B download and GPU train.
 They still run ingest, chat-template preprocess, stub generation, the real
 eval gate, and the local teaching registry.
+
+A recorded first-deploy smoke run (GIF + MP4) lives in
+docs/media/pipeline-e2e-smoke.* — see README “Watch the pipeline run”.
 """
 
 from __future__ import annotations

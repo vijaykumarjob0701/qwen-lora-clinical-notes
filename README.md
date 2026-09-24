@@ -37,6 +37,7 @@ The long version lives in this README (it *is* the blog post). A shorter narrati
 11. [Use case 2 — a code model for your own agent harness](#use-case-2-fine-tuning-a-code-model-for-your-own-agent-harness)
 12. [MLOps pipeline: automating the full lifecycle](#mlops-pipeline-automating-the-full-lifecycle)
     - [End-to-end pipeline](#end-to-end-pipeline)
+    - [Watch the pipeline run](#watch-the-pipeline-run)
 13. [Companion: LLM hyperparameters](#companion-llm-hyperparameters)
 14. [License and research-only reminder](#license-and-research-only-reminder)
 
@@ -986,6 +987,16 @@ mlops/var/
 ```
 
 `--smoke` / `--dry-run` never download a 7B checkpoint. They write a stub adapter, generate predictions by echoing (candidate) or truncating (baseline) the gold assistant text, then run the **real** eval gate and registry.
+
+### Watch the pipeline run
+
+First-deploy promote path (`--smoke --force` against an empty `mlops/var/registry/`): ingest → preprocess → smoke-stub train → generate eval → eval gate → local registry deploy. The recorded run exited **0** and wrote `registry/current`.
+
+![End-to-end smoke pipeline](docs/media/pipeline-e2e-smoke.gif)
+
+[Full MP4 recording](docs/media/pipeline-e2e-smoke.mp4) — six stages: ingest → preprocess → smoke train → generate eval → eval gate → local registry deploy on promote.
+
+A tie keeps production (exit `2`): `--smoke-candidate echo --smoke-baseline echo` shows `GATE FAILED — keep the current…` ([gif](docs/media/pipeline-e2e-gate-fail.gif), [mp4](docs/media/pipeline-e2e-gate-fail.mp4)).
 
 ---
 

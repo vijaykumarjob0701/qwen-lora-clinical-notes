@@ -56,6 +56,12 @@ system.
 
 Walkthrough: [README — MLOps pipeline](README.md#mlops-pipeline-automating-the-full-lifecycle).
 
+### Watch the pipeline run
+
+![End-to-end smoke pipeline](docs/media/pipeline-e2e-smoke.gif)
+
+[Full MP4 recording](docs/media/pipeline-e2e-smoke.mp4) — six stages: ingest → preprocess → smoke train → generate eval → eval gate → local registry deploy on promote. The keep-current (gate fail) path is in [pipeline-e2e-gate-fail.mp4](docs/media/pipeline-e2e-gate-fail.mp4).
+
 ## License
 
 Tutorial code is MIT (see [LICENSE](LICENSE)). Model weights keep their
